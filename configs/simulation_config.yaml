@@ -1,0 +1,18 @@
+planet: earth
+scene_geometry: basic_approach
+plane: cessna
+dt: 1.0
+state_discretization:
+uncertainty_magnitude:
+  x: 1
+  y: 1
+  v_x_airspeed: 1
+  v_y_airspeed: 1
+  theta: 1
+action_result_limits:
+  throttle:
+    min: 0.0
+    max: 1.0
+  theta:
+    min: -0.1745
+    max: 0.1745

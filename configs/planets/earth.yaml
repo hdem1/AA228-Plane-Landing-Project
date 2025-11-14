@@ -1,0 +1,6 @@
+air_density: 1.2250
+gravity: 9.81
+avg_wind_v_x: 5
+wind_noise_v_x: 2
+avg_wind_v_y: 2
+wind_noise_v_x: 0.5

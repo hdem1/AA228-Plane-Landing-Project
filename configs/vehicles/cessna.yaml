@@ -1,0 +1,7 @@
+mass: 1000
+m_lift: 5.143
+b_lift: 0.31
+a_drag: 0.054
+c_drag: 0.031
+A_wing: 16.165
+F_engine: 230
