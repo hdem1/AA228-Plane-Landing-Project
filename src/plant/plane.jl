@@ -12,7 +12,7 @@ struct Plane
 end
 
 function Plane(plane_name::String)
-    filepath = "configs/vehicles/"*planet_name*".yaml"
+    filepath = "configs/vehicles/"*plane_name*".yaml"
     config = YAML.load_file(filepath, dicttype=Dict{String, Any})
-    return Plane(name, config["mass"], config["m_lift"], config["b_lift"], config["a_drag"],  config["c_drag"], config["A_wing"], config["F_engine"], config["max_landing_vx"], config["max_landing_vy"])
+    return Plane(plane_name, config["mass"], config["m_lift"], config["b_lift"], config["a_drag"],  config["c_drag"], config["A_wing"], config["F_engine"], config["max_landing_vx"], config["max_landing_vy"])
 end

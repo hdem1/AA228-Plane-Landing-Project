@@ -1,6 +1,6 @@
-function step(state::State, action::Action, sim_config::SimConfig)
+function step(state::State, action::Action, sim_config::SimConfig, run_config::RunConfig)
     # Update throttle and theta with action:
-    state1 = State(state, action, sim_config.action_config)
+    state1 = State(state, action, sim_config.action_bounds_config)
 
     # Get dynamics:
     state2 = dynamics(state1, sim_config)
@@ -32,7 +32,7 @@ function get_reward_and_terminate(state::State, action::Action, sim_config::SimC
     end
 
     # Small punishment for going around (x > width)
-    if state.y > 0 && state.x >= sim_config.scene_geometry.width
+    if state.y > 0 && state.x >= sim_config.scene_params.width
         terminate = true
         reward -= 1000
     end 

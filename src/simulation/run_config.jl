@@ -1,56 +1,57 @@
 struct RunConfig
     init_state::State
     wind_alt_bins::Vector{Float64}
-    wind_v_x::Vector{Float64}
-    wind_v_y::Vector{Float64}
+    wind_vx::Vector{Float64}
+    wind_vy::Vector{Float64}
 end
 
 function generate_run_config(sim_config::SimConfig)
     # generate avg airspeed 
-    avg_wind_x = Normal(0, sim_config.scene_params.avg_wind_speed_x_sigma)
-    avg_wind_y = Normal(0, sim_config.scene_params.avg_wind_speed_y_sigma)
+    avg_wind_vx = rand(Normal(0, sim_config.scene_params.avg_wind_speed_x_sigma))
+    avg_wind_vy = rand(Normal(0, sim_config.scene_params.avg_wind_speed_y_sigma))
 
     # Generate individual windspeeds
     num_wind_layers =  sim_config.scene_params.num_wind_layers
     wind_alt_bins = zeros(Float64,num_wind_layers)
-    wind_v_x = zeros(Float64,num_wind_layers)
-    wind_v_y = zeros(Float64,num_wind_layers)
+    wind_vx = zeros(Float64,num_wind_layers)
+    wind_vy = zeros(Float64,num_wind_layers)
     for i in 1:num_wind_layers
         wind_alt_bins[i] = (i-1.0) / num_wind_layers * sim_config.scene_params.height
-        wind_v_x[i] = Normal(avg_wind_x, sim_config.scene_params.wind_speed_x_var_sigma)
-        wind_v_y[i] = Normal(avg_wind_y, sim_config.scene_params.wind_speed_y_var_sigma)
+        wind_vx[i] = rand(Normal(avg_wind_vx, sim_config.scene_params.wind_speed_x_var_sigma))
+        wind_vy[i] = rand(Normal(avg_wind_vy, sim_config.scene_params.wind_speed_y_var_sigma))
     end
 
     # Generate the initial state:
-    init_state = generate_init_state(sim_config.scene_geometry, wind_alt_bins, wind_v_x, wind_v_y)
+    intermediate_config = RunConfig(State(), wind_alt_bins, wind_vx, wind_vy)
+    init_state = generate_init_state(sim_config.scene_params, intermediate_config)
 
-    return RunConfig(init_state, wind_alt_bins, wind_v_x, wind_v_y)
+    return RunConfig(init_state, wind_alt_bins, wind_vx, wind_vy)
 end
 
-function generate_init_state(scene::SceneGeometry, run_config::RunConfig)
-   init_x = rand() * (scene.starting_x_bounds[1] - scene.starting_x_bounds[0]) + scene.starting_x_bounds[0]
-   init_y = rand() * (scene.starting_y_bounds[1] - scene.starting_y_bounds[0]) + scene.starting_y_bounds[0]
-   init_theta = rand() * (scene.starting_theta_bounds[1] - scene.starting_theta_bounds[0]) + scene.starting_theta_bounds[0]
-   init_vel = rand() * (scene.starting_vel_bounds[1] - scene.starting_vel_bounds[0]) + scene.starting_vel_bounds[0]
-   init_alpha = rand() * (scene.starting_alpha_bounds[1] - scene.starting_alpha_bounds[0]) + scene.starting_alpha_bounds[0] 
+function generate_init_state(scene::SceneParams, run_config::RunConfig)
+   init_x = rand() * (scene.starting_x_bounds[2] - scene.starting_x_bounds[1]) + scene.starting_x_bounds[1]
+   init_y = rand() * (scene.starting_y_bounds[2] - scene.starting_y_bounds[1]) + scene.starting_y_bounds[1]
+   init_theta = rand() * (scene.starting_theta_bounds[2] - scene.starting_theta_bounds[1]) + scene.starting_theta_bounds[1]
+   init_vel = rand() * (scene.starting_vel_bounds[2] - scene.starting_vel_bounds[1]) + scene.starting_vel_bounds[1]
+   init_alpha = rand() * (scene.starting_alpha_bounds[2] - scene.starting_alpha_bounds[1]) + scene.starting_alpha_bounds[1] 
 
-   init_vx = init_vel * cos(init_theta + init_alpha) + init_wind[0]
-   init_vy = init_vel * sin(init_theta + init_alpha) + init_wind[1]
+   init_wind_vx, init_wind_vy = get_wind_speeds(init_y, run_config)
 
-   get_wind_speeds()
+   init_vx = init_vel * cos(init_theta + init_alpha) + init_wind_vx
+   init_vy = init_vel * sin(init_theta + init_alpha) + init_wind_vy
 
-   new_state = State(init_x, init_y, init_theta, init_vx, init_vy, 0.5, init_wind[0], init_wind[1])
+   new_state = State(init_x, init_y, init_theta, init_vx, init_vy, 0.5, init_wind_vx, init_wind_vy)
 end
 
 function get_wind_speeds(alt::Float64, run_config::RunConfig)
     i = 1
-    while i < length(wind_alt_bins) && s.y > run_config.wind_alt_bins[i+1]
-        i++
+    while i < length(run_config.wind_alt_bins) && alt > run_config.wind_alt_bins[i+1]
+        i+=1
     end
-    return run_config.wind_v_x[i], run_config.wind_v_y[i]
+    return run_config.wind_vx[i], run_config.wind_vy[i]
 end
 
 function set_airspeeds(s::State, run_config::RunConfig)
-    wind_v_x, wind_v_y = get_wind_speeds(s.y, run_config)
-    return State(s.x, s.y, s.theta, s.vx, s.vy, s.throttle, wind_v_x, wind_v_y)
+    wind_vx, wind_vy = get_wind_speeds(s.y, run_config)
+    return State(s.x, s.y, s.theta, s.vx, s.vy, s.throttle, wind_vx, wind_vy)
 end

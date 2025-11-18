@@ -3,7 +3,7 @@ struct SimConfig
    planet::Planet
    plane::Plane
    scene_params::SceneParams
-   action_config::ActionConfig
+   action_bounds_config::ActionBoundsConfig
    obs_uncertainty_config::ObsUncertaintyConfig
 end
 
@@ -24,6 +24,10 @@ function load_sim_config()
    scene_params = SceneParams(config["scene_params"])
 
    # Action config:
+   action_config = ActionBoundsConfig(config["action_limits"])
+
+   # Observation Uncertainty:
+   obs_uncertainty_config = ObsUncertaintyConfig(config["uncertainty_magnitude"])
 
    return SimConfig(dt, planet, plane, scene_params, action_config, obs_uncertainty_config)
 end
