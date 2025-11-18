@@ -1,17 +1,10 @@
-struct SceneGeometry
-   width::Float64
-   height::Float64
-   height::Float64
-end
-
 struct SimConfig
    dt::Float64
    planet::Planet
-   scene_geometry::SceneGeometry
    plane::Plane
+   scene_params::SceneParams
    action_config::ActionConfig
    obs_uncertainty_config::ObsUncertaintyConfig
-   state_discretization_config::StateDiscretizationConfig
 end
 
 function load_sim_config()
@@ -21,13 +14,16 @@ function load_sim_config()
    # dt:
    dt = config["dt"]
 
-   # Planet and plane:
+   # Planet:
    planet = Planet(config["planet"])
+   
+   # Plane:
    plane = Plane(config["plane"])
+
+   # Scene Params:
+   scene_params = SceneParams(config["scene_params"])
 
    # Action config:
 
-   # 
-
-   return SimConfig(planet, )
+   return SimConfig(dt, planet, plane, scene_params, action_config, obs_uncertainty_config)
 end

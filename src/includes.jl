@@ -1,6 +1,7 @@
 import YAML
 
 using Random
+using Distributions
 
 include("environment/include_environment.jl")
 include("simulation/include_simulation.jl")

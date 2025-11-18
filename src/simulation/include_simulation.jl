@@ -1,5 +1,6 @@
 include("action.jl")
 include("state.jl")
+include("scene_params.jl")
 include("sim_config.jl")
 include("run_config.jl")
 include("dynamics.jl")
