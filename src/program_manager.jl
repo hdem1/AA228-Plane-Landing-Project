@@ -10,7 +10,7 @@ function run_basic()
     curr_state = run_config.init_state
     action = Action(0.0, 0.0)
     t = 0.0
-    while t < 40
+    while t < 40 && !terminate
         new_state, reward, terminate = step(curr_state, action, sim_config, run_config)
         t += sim_config.dt
         println("At Time $t, the plane is at position $(new_state.x), $(new_state.y) and angle $(new_state.theta), moving with speed $(new_state.vx), $(new_state.vy)")
