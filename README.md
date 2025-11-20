@@ -50,6 +50,28 @@ git config --global user.name [username]
 
 ## Using the terminal
 
+```
+git add .
+```
+
+To commit:
+
+```
+git commit -m "commit message"
+```
+
+To push:
+
+```
+git push
+```
+
+To pull:
+
+```
+git pull
+```
+
 # Running the Code
 
 In order to run the code in the terminal, make sure that you are in the root of the project and run 
