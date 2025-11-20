@@ -46,6 +46,10 @@ git config --global user.email [email]
 git config --global user.name [username]
 ```
 
+## Using VS Code:
+
+## Using the terminal
+
 # Running the Code
 
 In order to run the code in the terminal, make sure that you are in the root of the project and run 
