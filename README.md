@@ -39,7 +39,12 @@ julia src/run.jl --test-run
 
 # Git Stuff:
 
+In order to set up Github in VS code for the first time, run these two commands in the terminal:
 
+```
+git config --global user.email [email]
+git config --global user.name [username]
+```
 
 # Running the Code
 
