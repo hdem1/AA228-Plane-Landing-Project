@@ -18,3 +18,5 @@ In order to run the code in the terminal, make sure that you are in the root of 
 ```
 julia src/run.jl
 ```
+
+HI THIS IS EVAN 
