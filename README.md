@@ -104,3 +104,11 @@ If you want to figure out what is currently going on with git, you can get some 
 ```
 git status
 ```
+
+# Implementation Todos:
+
+- Make Discretization configs
+- Make Discretized observation
+- Change action handling so it just sets the throttle to the action throttle (instead of changing it)
+- Make csv output functions
+- Reach: Make python visualization

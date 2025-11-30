@@ -1,0 +1,9 @@
+state_discretization:
+  x: []
+  y: []
+  theta: []
+  vx_air: []
+  vy_air: []
+action_discretization:
+  throttle: []
+  pitch: []

@@ -37,6 +37,12 @@ function get_reward_and_terminate(state::State, action::Action, sim_config::SimC
         reward -= 1000
     end 
 
+    # Reward going downhill by the slope required to hit the runway 200 meters before the end
+    target_landing_dist = 100
+    target_slope = state.y / ((sim_config.scene_params.width - target_landing_dist) - state.x )
+    curr_slope = state.vy / state.vx
+    reward -= abs(target_slope - curr_slope) * 10
+
     # Punish significant state changes?
 
     return reward, terminate
