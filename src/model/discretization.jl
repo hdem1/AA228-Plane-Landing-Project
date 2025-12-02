@@ -6,7 +6,7 @@ struct ActionDiscretizationConfig
     tot_action_space::Int64
 end
 
-struct StateDiscretizationConfig
+struct ObsDiscretizationConfig
     x_bins::Vector{Float64}
     num_x_bins::Int64
     y_bins::Vector{Float64}
@@ -17,7 +17,7 @@ struct StateDiscretizationConfig
     num_vx_bins::Int64
     vy_air_bins::Vector{Float64}
     num_vy_bins::Int64
-    tot_state_space::Int64
+    tot_obs_space::Int64
 end
 
 struct DiscretizedAction
@@ -37,7 +37,7 @@ function get_action_results(dAction::DiscretizedAction, actionConfig::ActionDisc
     return Action(actionConfig.throttleChanges[dAction.throttleAction], actionConfig.pitchChanges[dAction.pitchAction])
 end
 
-function DiscretizedObservation(obs:::Observation, config::StateDiscretizationConfig)
+function DiscretizedObservation(obs::Observation, config::ObsDiscretizationConfig)
     x_bin = 1
     while (x_bin <= config.num_x_bins && obs.x > config.x_bins[x_bin])
         x_bin += 1
@@ -73,13 +73,13 @@ function ActionDiscretizationConfig(config::Dict{String, Any})
     )
 end
 
-function StateDiscretizationConfig(config::Dict{String, Any})
+function ObsDiscretizationConfig(config::Dict{String, Any})
     num_x_bins = length(config["x"]) + 1
     num_y_bins = length(config["y"]) + 1
     num_theta_bins = length(config["theta"]) + 1
     num_vx_bins = length(config["vx_air"]) + 1
     num_vy_bins = length(config["vy_air"]) + 1
-    return ActionDiscretizationConfig(
+    return ObsDiscretizationConfig(
         config["x"],
         num_x_bins,
         config["y"],
@@ -92,4 +92,38 @@ function StateDiscretizationConfig(config::Dict{String, Any})
         num_vy_bins,
         num_x_bins * num_y_bins * num_theta_bins * num_vx_bins * num_vy_bins
     )
+end
+
+function obsToIndex(obs::DiscretizedObservation, obs_config::ObsDiscretizationConfig)
+    index = (obs.x - 1)
+    index *= config.num_x_bins
+    index += (obs.y - 1)
+    index *= config.num_y_bins
+    index += (obs.theta - 1)
+    index *= config.num_theta_bins
+    index += (obs.vx_air - 1)
+    index *= config.num_vx_bins
+    index += (obs.vy_air - 1)
+    return index + 1
+end
+
+function indexToObs(index::Float64, obs_config::ObsDiscretizationConfig)
+    index -= 1
+    vy_air = (index % config.num_vx_bins) + 1
+    index = index / config.num_vx_bins
+    vx_air = (index % config.num_theta_bins) + 1
+    index = index / config.num_theta_bins
+    theta = (index % config.num_y_bins) + 1
+    index = index / config.num_y_bins
+    y = (index % config.num_x_bins) + 1
+    index = index / config.num_x_bins
+    x = index + 1
+    return DiscretizedObservation(x, y, theta, vx_air, vy_air)
+end
+
+function actionToIndex(action::DiscretizedAction, config::ActionDiscretizationConfig)
+    index = (action.throttleAction - 1)
+    index *= config.num_throttle_actions
+    index += (action.pitchAction - 1)
+    return index + 1
 end

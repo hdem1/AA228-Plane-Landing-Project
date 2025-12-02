@@ -33,18 +33,26 @@ function run_q_learning()
         # Loop through a single simulation:
         run_config = generate_run_config(sim_config)
         terminate = false
-        curr_state = run_config.init_state
+        curr_obs = run_config.init_state
         action = Action(0.0, 0.0)
         t = 0.0
         while !terminate
+            # Get new action:
+            if (rand() < model_config.epsilon) #Explore!
+                
+            else #Take best action!
+
+            end
+
             # Propagate Sim:
-            new_state, reward, terminate = step(curr_state, action, sim_config, run_config)
+            new_obs, reward, terminate = step(curr_obs, action, sim_config, run_config)
 
             # Update Q Table:
+            update_q_table(q_learning_model, curr_obs, action, new_obs, reward, model_config.discount_factor, model_config.learning_rate)
             
             # Update variables:
             t += sim_config.dt
-            curr_state = new_state
+            curr_obs = new_obs
         end
 
         iter+=1
