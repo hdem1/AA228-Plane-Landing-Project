@@ -24,7 +24,7 @@ function run_q_learning()
     model_config = load_model_config()
 
     # Set up q-learning:
-    q_learning_model = QLearningModel()
+    q_learning_model = QLearningModel(model_config.obs_discretization_config, model_config.action_discretization_config)
 
     # Outer loop
     iter = 0
@@ -39,10 +39,11 @@ function run_q_learning()
         while !terminate
             # Get new action:
             if (rand() < model_config.epsilon) #Explore!
-                
+                discretized_action = rand(1:model_config.action_discretization_config.tot_action_space)
             else #Take best action!
-
+                discretized_action = get_best_action(model, curr_obs)
             end
+            action = Action(discretized_action, model_config.action_discretization_config, sim_config.action_bounds_config)
 
             # Propagate Sim:
             new_obs, reward, terminate = step(curr_obs, action, sim_config, run_config)
@@ -58,5 +59,6 @@ function run_q_learning()
         iter+=1
     end
 
-    #
+    # Save CSV:
+
 end

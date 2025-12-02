@@ -1,7 +1,7 @@
 struct ActionDiscretizationConfig
-    throttle_changes::Vector{Float64}
+    throttle_bins::Vector{Float64}
     num_throttle_actions::Int64
-    pitch_changes::Vector{Float64}
+    pitch_bins::Vector{Float64}
     num_pitch_actions::Int64
     tot_action_space::Int64
 end
@@ -61,6 +61,18 @@ function DiscretizedObservation(obs::Observation, config::ObsDiscretizationConfi
     return DiscretizedObservation(x_bin, y_bin, theta_bin, vx_bin, vy_bin)
 end
 
+function DiscretizedAction(action::Action, config::ActionDiscretizationConfig)
+    throttle_bin = 1
+    while (throttle_bin <= config.num_throttle_actions && action.new_throttle > config.throttle_bins[throttle_bin])
+        throttle_bin += 1
+    end
+    dpitch_bin = 1
+    while (dpitch_bin <= config.num_pitch_actions && action.dPitch > config.pitch_bins[dpitch_bin])
+        dpitch_bin += 1
+    end
+    return DiscretizedAction(throttle_bins, dpitch_bin)
+end
+
 function ActionDiscretizationConfig(config::Dict{String, Any})
     num_throttle_actions = length(config["throttle"]) + 1
     num_pitch_actions = length(config["pitch"]) + 1
@@ -107,7 +119,7 @@ function obsToIndex(obs::DiscretizedObservation, obs_config::ObsDiscretizationCo
     return index + 1
 end
 
-function indexToObs(index::Float64, obs_config::ObsDiscretizationConfig)
+function indexToObs(index::Int64, obs_config::ObsDiscretizationConfig)
     index -= 1
     vy_air = (index % config.num_vx_bins) + 1
     index = index / config.num_vx_bins
@@ -126,4 +138,44 @@ function actionToIndex(action::DiscretizedAction, config::ActionDiscretizationCo
     index *= config.num_throttle_actions
     index += (action.pitchAction - 1)
     return index + 1
+end
+
+function indexToAction(index::Int64, config::ActionDiscretizationConfig)
+    index -= 1
+    pitchAction = (index % config.num_throttle_actions) + 1
+    index = index / config.num_throttle_actions
+    throttleAction = index + 1
+    return DiscretizedAction(throttleAction, pitchAction)
+end
+
+function Action(disc_action::DiscretizedAction, config::ActionDiscretizationConfig, action_bounds_config::ActionBoundsConfig)
+    # Get new throttle:
+    if disc_action.throttleAction == 1
+        low_throttle = action_bounds_config.throttle_limits[1]
+    else
+        low_throttle = config.throttle_bins[disc_action.throttleAction - 1]
+    end
+
+    if disc_action.throttleAction == config.num_throttle_actions + 1
+        high_throttle = action_bounds_config.throttle_limits[2]
+    else
+        high_throttle = config.throttle_bins[disc_action.throttleAction]
+    end
+    throttle = (low_throttle + high_throttle) / 2
+
+    # Get new pitch change:
+    if disc_action.pitchAction == 1
+        low_pitch = action_bounds_config.pitch_limits[1]
+    else
+        low_pitch = config.pitch_bins[disc_action.pitchAction - 1]
+    end
+
+    if disc_action.pitchAction == config.num_pitch_actions + 1
+        high_pitch = action_bounds_config.pitch_limits[2]
+    else
+        high_pitch = config.pitch_bins[disc_action.pitchAction]
+    end
+    dPitch = (low_pitch + high_pitch) / 2
+
+    return Action(throttle, dPitch)
 end

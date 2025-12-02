@@ -25,4 +25,7 @@ end
 function get_best_action(model::QLearningModel, obs::DiscretizedObservation)
     obsIndex = obsToIndex(obs, model.obs_discretization_config)
     _, best_action = findmax(obsIndex)
+    return indexToAction(best_action)
 end
+
+# function save_model(model::QLearningModel)
