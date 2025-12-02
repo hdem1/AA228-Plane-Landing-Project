@@ -7,3 +7,4 @@ state_discretization:
 action_discretization:
   throttle: []
   pitch: []
+max_num_iterations: 1000

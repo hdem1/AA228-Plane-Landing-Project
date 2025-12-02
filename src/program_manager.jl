@@ -17,3 +17,35 @@ function run_basic()
         curr_state = new_state
     end
 end
+
+function run_q_learning()
+    # Load configs:
+    sim_config = load_sim_config()
+    model_config = load_model_config()
+
+    # Outer loop
+    iter = 0
+    while iter < model_config.max_iter
+
+        # Loop through a single simulation:
+        run_config = generate_run_config(sim_config)
+        terminate = false
+        curr_state = run_config.init_state
+        action = Action(0.0, 0.0)
+        t = 0.0
+        while !terminate
+            # Propagate Sim:
+            new_state, reward, terminate = step(curr_state, action, sim_config, run_config)
+
+            # Update Q Table:
+            
+            # Update variables:
+            t += sim_config.dt
+            curr_state = new_state
+        end
+
+        iter++
+    end
+
+    #
+end
