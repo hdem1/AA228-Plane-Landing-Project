@@ -9,6 +9,7 @@ end
 
 function load_model_config()
    filepath = "configs/model_config.yaml"
+   print("Loading Model Configuration from $filepath.........")
    config = YAML.load_file(filepath, dicttype=Dict{String, Any})
    
    # Action discretization config
@@ -29,5 +30,7 @@ function load_model_config()
    # Epsilon:
    epsilon = config["exploration_rate"]
 
-   return ModelConfig(action_config, obs_config, max_iter, discount_factor, learning_rate, epsilon)
+   config = ModelConfig(action_config, obs_config, max_iter, discount_factor, learning_rate, epsilon)
+   println("Success")
+   return config
 end

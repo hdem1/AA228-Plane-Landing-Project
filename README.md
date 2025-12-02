@@ -23,6 +23,9 @@ Now you have opened the Julia REPL where you can add the necessary packages by r
 import Pkg; Pkg.add("YAML")
 import Pkg; Pkg.add("Random")
 import Pkg; Pkg.add("Distributions")
+import Pkg; Pkg.add("CSV")
+import Pkg; Pkg.add("DataFrames")
+import Pkg; Pkg.add("ProgressMeter")
 ```
 
 You can then exit the REPL by running:

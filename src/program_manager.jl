@@ -8,29 +8,42 @@ function run_basic()
     # Iterate through a simulation
     terminate = false
     curr_state = run_config.init_state
-    action = Action(0.0, 0.0)
+    action = Action(0.5, 0.0)
     t = 0.0
-    while t < 40 && !terminate
+    tot_reward = 0.0
+    while !terminate
         new_state, reward, terminate = step(curr_state, action, sim_config, run_config)
         t += sim_config.dt
         println("At Time $t, the plane is at position $(new_state.x), $(new_state.y) and angle $(new_state.theta), moving with speed $(new_state.vx), $(new_state.vy)")
         curr_state = new_state
+        tot_reward += reward
+        println("New reward = $reward --> tot reward = $tot_reward")
     end
 end
 
-function run_q_learning()
+function run_q_learning(saving::Bool)
     # Load configs:
     sim_config = load_sim_config()
     model_config = load_model_config()
 
+    # Setting up saving infrastructure:
+    if saving
+        set_up_log_folder(
+            model_config.max_iter,
+            model_config.obs_discretization_config.tot_obs_space, 
+            model_config.action_discretization_config.tot_action_space, 
+            model_config.discount_factor,
+            model_config.epsilon
+        )
+    end
+
     # Set up q-learning:
     q_learning_model = QLearningModel(model_config.obs_discretization_config, model_config.action_discretization_config)
 
-    # Setting up saving infrastructure:
-    list_of_rewards = zeros(model_config.max_iter)
-
     # Outer loop
     iter = 0
+    println("Training:")
+    p = Progress(model_config.max_iter)
     while iter < model_config.max_iter
 
         # Loop through a single simulation:
@@ -65,10 +78,10 @@ function run_q_learning()
         end
 
         iter+=1
-        list_of_rewards[iter] = tot_reward
-        println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
+        if saving
+            log_iteration(iter, t, tot_reward)
+        end
+        next!(p)
+        #println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
     end
-
-    # Save CSV:
-
 end
