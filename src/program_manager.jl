@@ -23,6 +23,9 @@ function run_q_learning()
     sim_config = load_sim_config()
     model_config = load_model_config()
 
+    # Set up q-learning:
+    q_learning_model = QLearningModel()
+
     # Outer loop
     iter = 0
     while iter < model_config.max_iter
@@ -44,7 +47,7 @@ function run_q_learning()
             curr_state = new_state
         end
 
-        iter++
+        iter+=1
     end
 
     #
