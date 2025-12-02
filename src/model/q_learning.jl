@@ -1,5 +1,5 @@
 struct QLearningModel
-    q_table::Vector{Vector{Float64}}
+    q_table::Matrix{Float64}
     obs_discretization_config::ObsDiscretizationConfig
     action_discretization_config::ActionDiscretizationConfig
 end
@@ -19,13 +19,13 @@ function update_q_table(model::QLearningModel, obs::DiscretizedObservation, acti
     newObsIndex = obsToIndex(new_obs, model.obs_discretization_config)
 
     # Update q_table:
-    model.q_table[obsIndex][actionIndex] += learning_rate * (reward + discount_factor * maximum(model.q_table[newObsIndex]) - model.q_table[obsIndex][actionIndex])
+    model.q_table[obsIndex, actionIndex] += learning_rate * (reward + discount_factor * maximum(model.q_table[newObsIndex, :]) - model.q_table[obsIndex, actionIndex])
 end
 
 function get_best_action(model::QLearningModel, obs::DiscretizedObservation)
     obsIndex = obsToIndex(obs, model.obs_discretization_config)
     _, best_action = findmax(obsIndex)
-    return indexToAction(best_action)
+    return indexToAction(best_action, model.action_discretization_config)
 end
 
 # function save_model(model::QLearningModel)

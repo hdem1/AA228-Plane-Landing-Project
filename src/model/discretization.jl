@@ -37,25 +37,30 @@ function get_action_results(dAction::DiscretizedAction, actionConfig::ActionDisc
     return Action(actionConfig.throttleChanges[dAction.throttleAction], actionConfig.pitchChanges[dAction.pitchAction])
 end
 
+function DiscretizedObservation(state::State, unc_config::ObsUncertaintyConfig, disc_config::ObsDiscretizationConfig)
+    obs = get_observation(state, unc_config)
+    return DiscretizedObservation(obs, disc_config)
+end
+
 function DiscretizedObservation(obs::Observation, config::ObsDiscretizationConfig)
     x_bin = 1
-    while (x_bin <= config.num_x_bins && obs.x > config.x_bins[x_bin])
+    while (x_bin < config.num_x_bins && obs.x > config.x_bins[x_bin])
         x_bin += 1
     end
     y_bin = 1
-    while (y_bin <= config.num_y_bins && obs.y > config.y_bins[y_bin])
+    while (y_bin < config.num_y_bins && obs.y > config.y_bins[y_bin])
         y_bin += 1
     end
     theta_bin = 1
-    while (theta_bin <= config.num_theta_bins && obs.theta > config.theta_bins[theta_bin])
+    while (theta_bin < config.num_theta_bins && obs.theta > config.theta_bins[theta_bin])
         theta_bin += 1
     end
     vx_bin = 1
-    while (vx_bin <= config.num_vx_bins && obs.vx_air > config.vx_air_bins[vx_bin])
+    while (vx_bin < config.num_vx_bins && obs.vx_air > config.vx_air_bins[vx_bin])
         vx_bin += 1
     end
     vy_bin = 1
-    while (vy_bin <= config.num_vy_bins && obs.vy_air > config.vy_air_bins[vy_bin])
+    while (vy_bin < config.num_vy_bins && obs.vy_air > config.vy_air_bins[vy_bin])
         vy_bin += 1
     end
     return DiscretizedObservation(x_bin, y_bin, theta_bin, vx_bin, vy_bin)
@@ -63,11 +68,11 @@ end
 
 function DiscretizedAction(action::Action, config::ActionDiscretizationConfig)
     throttle_bin = 1
-    while (throttle_bin <= config.num_throttle_actions && action.new_throttle > config.throttle_bins[throttle_bin])
+    while (throttle_bin < config.num_throttle_actions && action.new_throttle > config.throttle_bins[throttle_bin])
         throttle_bin += 1
     end
     dpitch_bin = 1
-    while (dpitch_bin <= config.num_pitch_actions && action.dPitch > config.pitch_bins[dpitch_bin])
+    while (dpitch_bin < config.num_pitch_actions && action.dPitch > config.pitch_bins[dpitch_bin])
         dpitch_bin += 1
     end
     return DiscretizedAction(throttle_bins, dpitch_bin)
@@ -106,45 +111,48 @@ function ObsDiscretizationConfig(config::Dict{String, Any})
     )
 end
 
-function obsToIndex(obs::DiscretizedObservation, obs_config::ObsDiscretizationConfig)
+function obsToIndex(obs::DiscretizedObservation, config::ObsDiscretizationConfig)
     index = (obs.x - 1)
-    index *= config.num_x_bins
-    index += (obs.y - 1)
     index *= config.num_y_bins
-    index += (obs.theta - 1)
+    index += (obs.y - 1)
     index *= config.num_theta_bins
-    index += (obs.vx_air - 1)
+    index += (obs.theta - 1)
     index *= config.num_vx_bins
+    index += (obs.vx_air - 1)
+    index *= config.num_vy_bins
     index += (obs.vy_air - 1)
     return index + 1
 end
 
-function indexToObs(index::Int64, obs_config::ObsDiscretizationConfig)
+function indexToObs(index::Int64, config::ObsDiscretizationConfig)
     index -= 1
-    vy_air = (index % config.num_vx_bins) + 1
-    index = index / config.num_vx_bins
-    vx_air = (index % config.num_theta_bins) + 1
-    index = index / config.num_theta_bins
-    theta = (index % config.num_y_bins) + 1
-    index = index / config.num_y_bins
-    y = (index % config.num_x_bins) + 1
-    index = index / config.num_x_bins
+    vy_air = (index % config.num_vy_bins) + 1
+    index = div(index, config.num_vy_bins)
+    vx_air = (index % config.num_vx_bins) + 1
+    index = div(index, config.num_vx_bins)
+    theta = (index % config.num_theta_bins) + 1
+    index = div(index, config.num_theta_bins)
+    y = (index % config.num_y_bins) + 1
+    index = div(index, config.num_y_bins)
     x = index + 1
     return DiscretizedObservation(x, y, theta, vx_air, vy_air)
 end
 
 function actionToIndex(action::DiscretizedAction, config::ActionDiscretizationConfig)
     index = (action.throttleAction - 1)
-    index *= config.num_throttle_actions
+    index *= config.num_pitch_actions
     index += (action.pitchAction - 1)
+    # println("Action (", action.throttleAction, ", ", action.pitchAction, ") --> Index ", (index+1))
     return index + 1
 end
 
 function indexToAction(index::Int64, config::ActionDiscretizationConfig)
+    initIndex = index
     index -= 1
-    pitchAction = (index % config.num_throttle_actions) + 1
-    index = index / config.num_throttle_actions
+    pitchAction = (index % config.num_pitch_actions) + 1
+    index = div(index, config.num_pitch_actions)
     throttleAction = index + 1
+    # println("Index ", initIndex, " --> Action (", throttleAction, ", ", pitchAction, ")")
     return DiscretizedAction(throttleAction, pitchAction)
 end
 
@@ -156,7 +164,7 @@ function Action(disc_action::DiscretizedAction, config::ActionDiscretizationConf
         low_throttle = config.throttle_bins[disc_action.throttleAction - 1]
     end
 
-    if disc_action.throttleAction == config.num_throttle_actions + 1
+    if disc_action.throttleAction == config.num_throttle_actions
         high_throttle = action_bounds_config.throttle_limits[2]
     else
         high_throttle = config.throttle_bins[disc_action.throttleAction]
@@ -170,7 +178,7 @@ function Action(disc_action::DiscretizedAction, config::ActionDiscretizationConf
         low_pitch = config.pitch_bins[disc_action.pitchAction - 1]
     end
 
-    if disc_action.pitchAction == config.num_pitch_actions + 1
+    if disc_action.pitchAction == config.num_pitch_actions
         high_pitch = action_bounds_config.pitch_limits[2]
     else
         high_pitch = config.pitch_bins[disc_action.pitchAction]
