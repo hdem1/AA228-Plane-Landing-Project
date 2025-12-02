@@ -107,8 +107,10 @@ git status
 
 # Implementation Todos:
 
-- Make Discretization configs
-- Make Discretized observation
-- Change action handling so it just sets the throttle to the action throttle (instead of changing it)
-- Make csv output functions
-- Reach: Make python visualization
+- [x] Make Discretization configs
+- [x] Make Discretized observation
+- [ ] Make q learning update function
+- [ ] Make q table tracking function
+- [ ] Change action handling so it just sets the throttle to the action throttle (instead of changing it)
+- [ ] Make csv output functions
+- [ ] Reach: Make python visualization

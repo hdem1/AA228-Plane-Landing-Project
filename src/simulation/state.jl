@@ -52,7 +52,7 @@ function get_alpha(s::State)
 end
 
 function State(state::State, action::Action, action_config::ActionBoundsConfig)
-    new_throttle = clamp(state.throttle + action.dThrottle, action_config.throttle_limits[1], action_config.throttle_limits[2])
+    new_throttle = clamp(action.new_throttle, action_config.throttle_limits[1], action_config.throttle_limits[2])
     new_theta = clamp(state.theta + action.dPitch, action_config.pitch_limits[1], action_config.pitch_limits[2])
     return State(state.x, state.y, new_theta, state.vx, state.vy, new_throttle, state.wind_vx, state.wind_vy)
 end
