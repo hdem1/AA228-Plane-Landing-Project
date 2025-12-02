@@ -1,6 +1,6 @@
 struct Action
     dThrottle::Float64
-    dPitch::Int64
+    dPitch::Float64 # changed to be a float
 end
 
 struct ActionBoundsConfig
