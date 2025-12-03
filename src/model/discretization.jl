@@ -37,7 +37,7 @@ function get_action_results(dAction::DiscretizedAction, actionConfig::ActionDisc
     return Action(actionConfig.throttleChanges[dAction.throttleAction], actionConfig.pitchChanges[dAction.pitchAction])
 end
 
-function DiscretizedObservation(obs:::Observation, config::StateDiscretizationConfig)
+function DiscretizedObservation(obs::Observation, config::StateDiscretizationConfig)
     x_bin = 1
     while (x_bin <= config.num_x_bins && obs.x > config.x_bins[x_bin])
         x_bin += 1
