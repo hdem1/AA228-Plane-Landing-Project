@@ -13,6 +13,14 @@ function State()
     return State(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 end
 
+function get_state_print_format()
+    return "x,y,theta,vx,vy,throttle,wind_vx,wind_vy"
+end
+
+function get_state_string(s::State)
+    return "$(s.x),$(s.y),$(s.theta),$(s.vx),$(s.vy),$(s.throttle),$(s.wind_vx),$(s.wind_vy)"
+end
+
 struct Observation
     x::Float64
     y::Float64

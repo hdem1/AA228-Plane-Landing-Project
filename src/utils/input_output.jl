@@ -47,10 +47,21 @@ end
 
 function log_iteration(iter::Int64, duration::Float64, tot_reward::Float64)
     if LOGGING_FILEPATH == ""
-        error("you must set up the save folder by calling set_up_log_folder() first")
+        error("you must set up the save folder by calling set_up_log_folder() before trying to log an iteration")
     end
     open(LOGGING_FILEPATH*"/training_log.csv", "a") do f
         println(f, "$iter,$duration,$tot_reward")
+    end
+end
+
+function log_trajectory(run_name, states::Vector{String})
+    if LOGGING_FILEPATH == ""
+        error("you must set up the save folder by calling set_up_log_folder() before trying to log a trajectory")
+    end
+    open(LOGGING_FILEPATH*"/trajectories/$run_name.csv", "w") do f
+        for i in states
+            println(f, i)
+        end
     end
 end
 
@@ -77,7 +88,7 @@ function delete_run(run_num::Int64)
         println("Success")
 
         # Delete line in ouput CSV
-        println("Deleting log in list of final models at $MODEL_LOG_FILENAME........")
+        print("Deleting log in list of final models at $MODEL_LOG_FILENAME........")
         model_log = CSV.read(MODEL_LOG_FILENAME, DataFrame)
         filter!(row -> row.model_num != run_num, model_log)
         CSV.write(MODEL_LOG_FILENAME, model_log)

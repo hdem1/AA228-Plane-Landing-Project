@@ -53,6 +53,12 @@ function run_q_learning(saving::Bool)
         curr_obs = DiscretizedObservation(curr_state, sim_config.obs_uncertainty_config, model_config.obs_discretization_config)
         t = 0.0
         tot_reward = 0.0
+        if saving
+            states = Vector{String}()
+            push!(states, "t,reward,"*get_state_print_format())
+            push!(states, "0.0,0.0,"*get_state_string(curr_state))
+        end
+
         while !terminate
             # Get new action:
             if (rand() < model_config.epsilon) #Explore!
@@ -71,6 +77,7 @@ function run_q_learning(saving::Bool)
             
             # Update variables:
             t += sim_config.dt
+            push!(states,"$t,$reward,"*get_state_string(curr_state))
             curr_obs = new_obs
             curr_state = new_state
             #println("Time = ", t)
@@ -80,6 +87,7 @@ function run_q_learning(saving::Bool)
         iter+=1
         if saving
             log_iteration(iter, t, tot_reward)
+            log_trajectory("training$iter", states)
         end
         next!(p)
         #println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
@@ -100,6 +108,11 @@ function run_q_learning(saving::Bool)
         curr_obs = DiscretizedObservation(curr_state, sim_config.obs_uncertainty_config, model_config.obs_discretization_config)
         t = 0.0
         tot_reward = 0.0
+        if saving
+            states = Vector{String}()
+            push!(states,"t,reward,"*get_state_print_format())
+            push!(states,"0.0,0.0,"*get_state_string(curr_state))
+        end
         while !terminate
             # Get new action:
             discretized_action = get_best_action(q_learning_model, curr_obs)
@@ -111,6 +124,7 @@ function run_q_learning(saving::Bool)
             
             # Update variables:
             t += sim_config.dt
+            push!(states,"$t,$reward,"*get_state_string(curr_state))
             curr_obs = new_obs
             curr_state = new_state
             tot_reward += reward
@@ -119,6 +133,9 @@ function run_q_learning(saving::Bool)
         iter+=1
         avg_reward += (tot_reward / model_config.test_iter)
         next!(p2)
+        if saving
+            log_trajectory("testing$iter", states)
+        end
         #println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
     end
     println("Finished Testing with Average Reward $avg_reward")
