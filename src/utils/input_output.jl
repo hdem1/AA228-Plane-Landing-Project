@@ -1,6 +1,7 @@
 LOGGING_FILEPATH = ""
 RUN_NUMBER = -1
 TRAINING_LOG_FILENAME="outputs/training_runs/training_runs.csv"
+MODEL_LOG_FILENAME="outputs/final_models/final_model_log.csv"
 
 # Get Next filename:
 function get_next_training_log_filename()
@@ -22,9 +23,10 @@ function set_up_log_folder(max_iter::Int64, state_space::Int64, action_space::In
     global LOGGING_FILEPATH, RUN_NUMBER
     LOGGING_FILEPATH = new_log_folder
     RUN_NUMBER = run_number
-    mkdir(new_log_folder)
-    mkdir(new_log_folder*"/trajectories")
-    mkdir(new_log_folder*"/intermediate_models")
+    mkdir(LOGGING_FILEPATH)
+    mkdir(LOGGING_FILEPATH*"/trajectories")
+    mkdir(LOGGING_FILEPATH*"/intermediate_models")
+    mkdir(LOGGING_FILEPATH*"/configs")
 
     # Make log csv:
     open(LOGGING_FILEPATH*"/training_log.csv", "w") do f
@@ -35,6 +37,10 @@ function set_up_log_folder(max_iter::Int64, state_space::Int64, action_space::In
     open("outputs/training_runs/training_runs.csv", "a") do f
         println(f, "$RUN_NUMBER,$max_iter,$state_space,$action_space,$discount_factor,$epsilon")
     end
+
+    # Copy input configs:
+    cp("configs/simulation_config.yaml", LOGGING_FILEPATH*"/configs/simulation_config.yaml")
+    cp("configs/model_config.yaml", LOGGING_FILEPATH*"/configs/model_config.yaml")
 
     println("Success")
 end
@@ -49,19 +55,49 @@ function log_iteration(iter::Int64, duration::Float64, tot_reward::Float64)
 end
 
 function delete_run(run_num::Int64)
-    println("Are you sure you want to delete run #$run_num? [y/n]")
+    println("Are you sure you want to delete all data (training log, final model, etc) for run #$run_num? [y/n]")
     answer = readline()
     if answer == "y" || answer == "Y"
-        print("Deleting run #$run_num.....")
 
         # Delete folder:
+        print("Deleting training run folder outputs/training_runs/run$run_num.....")
         rm("outputs/training_runs/run$run_num"; recursive=true, force=true)
+        println("Success")
 
         # Delete line in CSV:
+        print("Deleting log in list of training runs at $TRAINING_LOG_FILENAME.....")
         training_log = CSV.read(TRAINING_LOG_FILENAME, DataFrame)
         filter!(row -> row.run_number != run_num, training_log)
         CSV.write(TRAINING_LOG_FILENAME, training_log)
-
         println("Success")
+
+        # Delete final model
+        print("Deleting final model at outputs/final_models/models/model$run_num.csv.....")
+        rm("outputs/final_models/models/model$run_num.csv"; force=true)
+        println("Success")
+
+        # Delete line in ouput CSV
+        println("Deleting log in list of final models at $MODEL_LOG_FILENAME........")
+        model_log = CSV.read(MODEL_LOG_FILENAME, DataFrame)
+        filter!(row -> row.model_num != run_num, model_log)
+        CSV.write(MODEL_LOG_FILENAME, model_log)
+        println("Success")
+
+        println("Run #$run_num has been successfully deleted.")
+    end
+end
+
+function log_model(model_dataframe::DataFrame, average_reward::Float64)
+    if RUN_NUMBER == -1
+        error("You cannot save the final model without saving the rest of the training data")
+    end
+
+    # Save model itself:
+    new_file = "outputs/final_models/models/model$RUN_NUMBER.csv"
+    CSV.write(new_file, model_dataframe)
+
+    # Add model to log:
+    open(MODEL_LOG_FILENAME, "a") do f
+        println(f, "$RUN_NUMBER,$average_reward")
     end
 end

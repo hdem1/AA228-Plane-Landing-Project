@@ -31,4 +31,12 @@ function get_best_action(model::QLearningModel, obs::DiscretizedObservation)
     return indexToAction(best_action, model.action_discretization_config)
 end
 
-# function save_model(model::QLearningModel)
+function model2DataFrame(model::QLearningModel)
+    df = DataFrame(state = Int[], action = [], value = [])
+    for s in 1:model.obs_discretization_config.tot_obs_space
+        for a in 1:model.action_discretization_config.tot_action_space
+            push!(df, (s, a, model.q_table[s,a]))
+        end
+    end
+    return df
+end

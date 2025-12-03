@@ -5,6 +5,7 @@ struct ModelConfig
    discount_factor::Float64
    learning_rate::Float64
    epsilon::Float64
+   test_iter::Int64
 end
 
 function load_model_config()
@@ -30,7 +31,10 @@ function load_model_config()
    # Epsilon:
    epsilon = config["exploration_rate"]
 
-   config = ModelConfig(action_config, obs_config, max_iter, discount_factor, learning_rate, epsilon)
+   # Test Iterations:
+   test_iter = config["test_iterations"]
+
+   config = ModelConfig(action_config, obs_config, max_iter, discount_factor, learning_rate, epsilon, test_iter)
    println("Success")
    return config
 end
