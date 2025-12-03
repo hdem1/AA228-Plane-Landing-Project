@@ -21,13 +21,14 @@ function run_basic()
     end
 end
 
-function run_q_learning(saving::Bool)
+function run_q_learning()
     # Load configs:
     sim_config = load_sim_config()
     model_config = load_model_config()
+    save_config = load_save_config()
 
     # Setting up saving infrastructure:
-    if saving
+    if save_config.saving
         set_up_log_folder(
             model_config.max_iter,
             model_config.obs_discretization_config.tot_obs_space, 
@@ -53,7 +54,7 @@ function run_q_learning(saving::Bool)
         curr_obs = DiscretizedObservation(curr_state, sim_config.obs_uncertainty_config, model_config.obs_discretization_config)
         t = 0.0
         tot_reward = 0.0
-        if saving
+        if should_save_training_traj(save_config, iter, false)
             states = Vector{String}()
             push!(states, "t,reward,"*get_state_print_format())
             push!(states, "0.0,0.0,"*get_state_string(curr_state))
@@ -77,20 +78,24 @@ function run_q_learning(saving::Bool)
             
             # Update variables:
             t += sim_config.dt
-            push!(states,"$t,$reward,"*get_state_string(curr_state))
+            if should_save_training_traj(save_config, iter, false)
+                push!(states,"$t,$reward,"*get_state_string(curr_state))
+            end
             curr_obs = new_obs
             curr_state = new_state
-            #println("Time = ", t)
             tot_reward += reward
         end
 
-        iter+=1
-        if saving
+        if should_save_training_traj(save_config, iter, true)
             log_iteration(iter, t, tot_reward)
             log_trajectory("training$iter", states)
         end
+        if should_save_intermediate_model(save_config, iter, true)
+            model_dataframe = model2DataFrame(q_learning_model)
+            log_intermediate_model(iter, model_dataframe)
+        end
+        iter+=1
         next!(p)
-        #println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
     end
     println("Training concluded.")
 
@@ -108,7 +113,7 @@ function run_q_learning(saving::Bool)
         curr_obs = DiscretizedObservation(curr_state, sim_config.obs_uncertainty_config, model_config.obs_discretization_config)
         t = 0.0
         tot_reward = 0.0
-        if saving
+        if should_save_testing_traj(save_config, iter, false)
             states = Vector{String}()
             push!(states,"t,reward,"*get_state_print_format())
             push!(states,"0.0,0.0,"*get_state_string(curr_state))
@@ -124,24 +129,25 @@ function run_q_learning(saving::Bool)
             
             # Update variables:
             t += sim_config.dt
-            push!(states,"$t,$reward,"*get_state_string(curr_state))
+            if should_save_testing_traj(save_config, iter, false)
+                push!(states,"$t,$reward,"*get_state_string(curr_state))
+            end
             curr_obs = new_obs
             curr_state = new_state
             tot_reward += reward
         end
 
-        iter+=1
         avg_reward += (tot_reward / model_config.test_iter)
-        next!(p2)
-        if saving
+        if should_save_testing_traj(save_config, iter, true)
             log_trajectory("testing$iter", states)
         end
-        #println("Iteration #", iter, " had total reward ", tot_reward, " and lasted ", t, " seconds.")
+        next!(p2)
+        iter+=1
     end
     println("Finished Testing with Average Reward $avg_reward")
 
     # Save final model:
-    if saving
+    if save_config.saving
         print("Saving final model.......")
         model_dataframe = model2DataFrame(q_learning_model)
         log_model(model_dataframe, avg_reward)

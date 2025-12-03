@@ -3,11 +3,7 @@ include("includes.jl")
 if ARGS[1] == "--test-run"
     run_basic()
 elseif ARGS[1] == "--q-learning"
-    if "--no-save" in ARGS
-        run_q_learning(false)
-    else
-        run_q_learning(true)
-    end
+    run_q_learning()
 elseif ARGS[1] == "--delete-run"
     if length(ARGS) >= 2
         for i in 2:length(ARGS)

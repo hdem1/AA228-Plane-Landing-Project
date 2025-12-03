@@ -112,3 +112,13 @@ function log_model(model_dataframe::DataFrame, average_reward::Float64)
         println(f, "$RUN_NUMBER,$average_reward")
     end
 end
+
+function log_intermediate_model(iter::Int64, model_dataframe::DataFrame)
+    if RUN_NUMBER == -1
+        error("You cannot save the final model without saving the rest of the training data")
+    end
+
+    # Save model itself:
+    new_file = "$LOGGING_FILEPATH/intermediate_models/iteration$iter.csv"
+    CSV.write(new_file, model_dataframe)
+end

@@ -1,0 +1,7 @@
+saving: True
+save_training_trajs: True
+training_traj_frequency: 100
+save_testing_trajs: True
+testing_traj_frequency: 10
+save_intermediate_models: True
+intermediate_model_save_frequency: 100
