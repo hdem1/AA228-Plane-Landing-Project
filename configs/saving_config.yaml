@@ -1,4 +1,4 @@
-saving: True
+saving: False
 save_training_trajs: True
 training_traj_frequency: 100
 save_testing_trajs: True
