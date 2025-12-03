@@ -23,6 +23,9 @@ Now you have opened the Julia REPL where you can add the necessary packages by r
 import Pkg; Pkg.add("YAML")
 import Pkg; Pkg.add("Random")
 import Pkg; Pkg.add("Distributions")
+import Pkg; Pkg.add("CSV")
+import Pkg; Pkg.add("DataFrames")
+import Pkg; Pkg.add("ProgressMeter")
 ```
 
 You can then exit the REPL by running:
@@ -48,6 +51,38 @@ In order to do a test simulation that just flies with constant throttle and pitc
 ```
 julia src/run.jl --test-run
 ```
+
+### Running Q-Learning
+
+To run Q-learning, enter the command below. Please see the Configuration section on additional details on how to configure your run.
+
+```
+julia src/run.jl --q-learning
+```
+
+### Deleting a run
+
+Since I often found the need to delete runs while training and modifying the code, there is also a function to delete a run:
+
+```
+julia src/run.jl --delete-run [run_number]
+```
+
+# Configurations
+
+Much of the code is organized to pull inputs from configuration files located in the `configs/` folder. There are three primary configurations that you may want to change:
+
+### `simulation_config.yaml`
+
+This configuration deals with the setup of the actual simulator, including what plane you are flying, the basic geometry of the situation, the timestep, the bounds on the actions, and the uncertainty on the observation. Some of the parameters (such as `planet`, `scene_params`, and `plane`) refer to other configuration files for improved organization.
+
+### `model_config.yaml`
+
+This configuration sets up the actual learning part of the code, including the discretization of the observation and action spaces, the number of training and testing iterations, and various hyperparameters used in the learning process. One note is that the discretization parameters are lists of the values at which two bins are separated. i.e. if a variable is defined by [-5, 0, 5], this means there are 4 bins: -inf to -5, -5 to 0, 0 to 5, and 5 to infinity. For the action discretization, action values are sampled at the center of their bin (with the infinities being replaced by the action bounds).
+
+### `saving_config.yaml`
+
+This configuration hopefully makes it easier to parameterize how different artifacts are saved throughout the training process. You can toggle all saving on and off as well as the saving of training trajectories, testing trajectories, and intermediate models as the training progresses. You can also parameterize the number of iterations you want between each of these saving actions. All files are saved into the `outputs/` folder.
 
 # Git Stuff:
 
@@ -109,8 +144,8 @@ git status
 
 - [x] Make Discretization configs
 - [x] Make Discretized observation
-- [ ] Make q learning update function
-- [ ] Make q table tracking function
-- [ ] Change action handling so it just sets the throttle to the action throttle (instead of changing it)
-- [ ] Make csv output functions
+- [x] Make q learning update function
+- [x] Make q table tracking function
+- [x] Change action handling so it just sets the throttle to the action throttle (instead of changing it)
+- [x] Make csv output functions
 - [ ] Reach: Make python visualization
