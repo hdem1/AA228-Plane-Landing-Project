@@ -1,141 +1,97 @@
-module PlanePOMDP
+#module PlanePOMDP
 
-# using POMDPs: POMDP
-using Random
+# include simulator
+#include(joinpath(@__DIR__, "includes.jl"))
+include("includes.jl")
 
+# dependencies
+using POMDPs
+using POMDPTools
 
-export PlanePOMDPProblem, PlaneStateWrapper, PlaneAction, PlaneObs
-export initalstate, generate, discount
-
-# -------------------------
-# Import dependencies
-# -------------------------
-# include("plant/planet.jl")
-# include("simulation/action.jl")
-# include("simulation/state.jl")
-# include("plant/plane.jl")
-# include("simulation/scene_params.jl")
-# include("simulation/sim_config.jl")
-include(joinpath(@__DIR__, "plant/planet.jl"))
-include(joinpath(@__DIR__, "simulation/action.jl"))
-include(joinpath(@__DIR__, "simulation/state.jl"))
-include(joinpath(@__DIR__, "plant/plane.jl"))
-include(joinpath(@__DIR__, "simulation/scene_params.jl"))
-include(joinpath(@__DIR__, "simulation/sim_config.jl"))
-
-# -------------------------
-# Basic types (light wrappers)
-# -------------------------
-struct PlaneStateWrapper
-    s::State   # will store your simulator State instance
-end
-
-struct PlaneAction
-    dThrottle::Float64
-    dPitch::Float64
-end
-
-struct PlaneObs
-    z::Vector{Float64}
+struct PlaneLandingPOMDP <: POMDP{State, Action, Observation}
+    sim_config::SimConfig
+    run_config::RunConfig
 end
 
 # -------------------------
-# The POMDP problem struct
+# Make State work with POMCPOW
 # -------------------------
-# const BasePOMDP = POMDP{PlaneStateWrapper, PlaneAction}
+import Random
+# Random sampling for particle generation
+function Random.rand(rng::AbstractRNG, ::Type{State})
+    s0 = State(
+        rand(rng, 0:1000.0:10000.0),  # x
+        rand(rng, 0.0:1000.0:3000.0),      # y
+        rand(rng, -0.3:0.3),               # theta
+        rand(rng, -50.0:25.0:50.0),        # vx
+        rand(rng, -50.0:25.0:50.0),        # vy
+        0.5,                               # throttle
+        0.0,                               # wind_vx
+        0.0                                # wind_vy
+    )
+    return s0
+end
 
-# struct PlanePOMDPProblem <: BasePOMDP
-#     sim_config::Any
-#     action_config::Any
-#     obs_uncertainty::ObsUncertaintyConfig
-#     crash_penalty::Float64
-#     touchdown_reward::Float64
-# end
-struct PlanePOMDPProblem
-    sim_config::Any
-    action_config::Any
-    obs_uncertainty::ObsUncertaintyConfig
-    crash_penalty::Float64
-    touchdown_reward::Float64
+# Needed by POMCPOW to copy states
+Base.copy(s::State) = State(s.x, s.y, s.theta, s.vx, s.vy, s.throttle, s.wind_vx, s.wind_vy)
+
+# -------------------------
+# POMDP interface
+# -------------------------
+function POMDPs.initialstate(p::PlaneLandingPOMDP)
+    return Deterministic(p.run_config.init_state)
 end
 
 # -------------------------
-# Initial state 
+# Action space
 # -------------------------
-function initialstate(p::PlanePOMDPProblem)
-    if hasfield(typeof(p.sim_config), :init_state)
-        return PlaneStateWrapper(p.sim_config.init_state)
-    else
-        return PlaneStateWrapper(State())
+function POMDPs.actions(p::PlaneLandingPOMDP)
+    ab = p.sim_config.action_bounds_config
+    t_min, t_max = ab.throttle_limits
+    p_min, p_max = ab.pitch_limits
+    throttle_vals = collect(range(t_min, t_max; length = 3))
+    pitch_vals    = collect(range(p_min, p_max; length = 3))
+    acts = Action[]
+    for th in throttle_vals, ph in pitch_vals
+        push!(acts, Action(th, ph))
     end
+    return acts
 end
 
+POMDPs.actionindex(p::PlaneLandingPOMDP, a::Action) = findfirst(==(a), actions(p))
+# POMDPs.actions(p::PlaneLandingPOMDP) = all_actions(p.sim_config)
+# POMDPs.actionindex(::PlaneLandingPOMDP, a) = a.action_index
 # -------------------------
-# Helper: apply action increments to state with new throttle/theta
+# Transition & Reward
 # -------------------------
+function POMDPs.gen(p::PlaneLandingPOMDP, s::State, a::Action)
+    # Use your simulator to generate next state, reward, done
+    next_state, reward, done = step(s, a, p.sim_config, p.run_config)
 
-function _apply_action(state::State, action::PlaneAction, action_config)
-    sim_action = Action(action.dThrottle, action.dPitch)
-    return State(state, sim_action, action_config)
+    # Observation: can be full state, or noisy version
+    obs = observation(next_state, p.sim_config, p.run_config)
+
+    return (next_state, obs, reward, done)
 end
 
-# -------------------------
-# Helper: gen obs
-# -------------------------
-function _get_observation(state::State, obs_uncertainty::ObsUncertaintyConfig)
-    obs = get_observation(state, obs_uncertainty)
-    # Flatten into vector for POMDPs
-    return PlaneObs([obs.x, obs.y, obs.theta, obs.vx_air, obs.vy_air])
-end
-
-# -------------------------
-# Reward and terminal helpers
-# -------------------------
-function reward(state::State, p::PlanePOMDPProblem)
-    r = 0.0
-    y_pos = state.y
-    r -= abs(y_pos) * 0.01
-    if abs(y_pos) < 0.5
-        r += p.touchdown_reward
-    elseif y_pos < 0.0
-        r += p.crash_penalty
-    end
+POMDPs.reward(p::PlaneLandingPOMDP, s::State, a::Action, sp::State) = begin
+    _, r, _ = step(s, a, p.sim_config, p.run_config)
     return r
 end
 
-function terminal(state::State)
-    y_pos = state.y
-    return abs(y_pos) < 0.5 || y_pos < 0.0
-end
+POMDPs.discount(::PlaneLandingPOMDP) = 0.9
 
-
-# -------------------------
-# Generative model: single simulate step
-# -------------------------
-function generate(p::PlanePOMDPProblem, wrapped::PlaneStateWrapper, a::PlaneAction)
-    # unwrap state
-    sim_state = wrapped.s
-
-    # apply action increments
-    new_state = _apply_action(sim_state, a, p.action_config)
-
-    # step dynamics
-    next_state = dynamics(new_state, p.sim_config)
-
-    # generate obs
-    obs = _get_observation(next_state, p.obs_uncertainty)
-
-    # simple reward: encourage lower altitude to touchdown
-    r = reward(next_state, p)
-    term = terminal(next_state)
-    return (PlaneStateWrapper(next_state), obs, r, term)
+function POMDPs.transition(p::PlaneLandingPOMDP, s::State, a::Action)
+    next_state, reward, done = step(s, a, p.sim_config, p.run_config)
+    return Deterministic(next_state)
 end
 
 # -------------------------
-# Discount
+# Observation function
 # -------------------------
-discount(::PlanePOMDPProblem) = 0.9
+function POMDPs.observation(p::PlaneLandingPOMDP, s::State, a::Action, sp::State)
+    # Here you can return full continuous state or add noise
+    return sp
+end
 
-end # module
-
-
+#end # module
