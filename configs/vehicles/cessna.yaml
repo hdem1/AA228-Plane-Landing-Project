@@ -5,5 +5,5 @@ a_drag: 0.054
 c_drag: 0.031
 A_wing: 16.165
 F_engine: 1000
-max_landing_vx: 20
-max_landing_vy: 2
+max_landing_vx: 35
+max_landing_vy: -10

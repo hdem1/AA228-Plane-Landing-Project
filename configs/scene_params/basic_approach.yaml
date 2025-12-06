@@ -1,8 +1,8 @@
 name: Basic Approach
-width: 10000
+width: 30000
 height: 3000
 starting_x_bounds: [10, 300]
-starting_y_bounds: [2000, 2900]
+starting_y_bounds: [500, 1000] # edited these to land
 starting_theta_bounds: [-0.1, 0.1]
 starting_alpha_bounds: [0.0, 0.05]
 starting_vel_bounds: [40, 50]

@@ -22,10 +22,12 @@ function get_reward_and_terminate(state::State, action::Action, sim_config::SimC
     if state.y <= 0
         if state.vy <= sim_config.plane.max_landing_vy #Crashed
             reward -= 10000
+            @info "CRASH landing" y=state.y vy=state.vy vx=state.vx max_vy=max_vy max_vx=max_vx reward=reward
         else #Successful landing
-            reward += 5000
+            reward += 10000
             reward -= abs(state.vy) * 100 # Reward less landing impact
             reward -= max(0, state.vx - sim_config.plane.max_landing_vx) * 20 # Punish landing with too much horizontal speed
+            @info "SUCCESSFUL landing" y=state.y vy=state.vy vx=state.vx max_vy=max_vy max_vx=max_vx reward=reward
         end
         return reward, true
     end

@@ -3,6 +3,9 @@ using QMDP
 using POMDPTools # HistoryRecorder, etc.
 using POMDPTools: Deterministic
 using POMDPTools: state_hist
+using POMDPTools: DiscreteBelief
+using LinearAlgebra
+
 
 using CSV, DataFrames
 
@@ -35,11 +38,11 @@ const vy_max =    50.0
 const theta_min = -0.3 # radians
 const theta_max =  0.3
 
-const XS     = collect(range(x_min,     x_max;     length = NX))
-const YS     = collect(range(y_min,     y_max;     length = NY))
+const XS     = collect(range(x_min, x_max; length = NX))
+const YS     = collect(range(y_min, y_max; length = NY))
 const THETAS = collect(range(theta_min, theta_max; length = NTH))
-const VXS    = collect(range(vx_min,    vx_max;    length = NVX))
-const VYS    = collect(range(vy_min,    vy_max;    length = NVY))
+const VXS    = collect(range(vx_min, vx_max; length = NVX))
+const VYS    = collect(range(vy_min, vy_max; length = NVY))
 
 function make_state_grid(run_config::RunConfig)
     s0 = run_config.init_state
@@ -126,20 +129,16 @@ POMDPs.states(p::PlaneLandingPOMDP) = p.state_space
 
 function POMDPs.stateindex(p::PlaneLandingPOMDP, s::State)
     # Find nearest index in each dimension
-    ix  = argmin(abs.(XS     .- s.x))
-    iy  = argmin(abs.(YS     .- s.y))
+    ix  = argmin(abs.(XS .- s.x))
+    iy  = argmin(abs.(YS .- s.y))
     ith = argmin(abs.(THETAS .- s.theta))
-    ivx = argmin(abs.(VXS    .- s.vx))
-    ivy = argmin(abs.(VYS    .- s.vy))
+    ivx = argmin(abs.(VXS .- s.vx))
+    ivy = argmin(abs.(VYS .- s.vy))
 
     # Convert 5D indices (ix, iy, ith, ivx, ivy) into a single linear index.
     idx = 1 +
-          (ix  - 1) * (NY * NTH * NVX * NVY) +
-          (iy  - 1) * (     NTH * NVX * NVY) +
-          (ith - 1) * (           NVX * NVY) +
-          (ivx - 1) * (                 NVY) +
-          (ivy - 1)
-
+          (ix  - 1) * (NY * NTH * NVX * NVY) + (iy  - 1) * (NTH * NVX * NVY) +
+          (ith - 1) * (NVX * NVY) + (ivx - 1) * (NVY) +(ivy - 1)
     return idx
 end
 
@@ -164,12 +163,71 @@ pomdp = PlaneLandingPOMDP(sim_config, run_config, state_space)
 solver = QMDPSolver()
 policy = solve(solver, pomdp)
 
-sim = HistoryRecorder(max_steps = 200)
-hist = simulate(sim, pomdp, policy)
+# pick QMDP action for a single *grid* state
+function qmdp_action_for_grid_state(pomdp::PlaneLandingPOMDP,
+                                    policy::POMDPTools.Policies.AlphaVectorPolicy,
+                                    s_grid::State)
 
-# Export trajectory 
+    # 1. One-hot belief over grid states
+    idx = stateindex(pomdp, s_grid)
+    n   = length(pomdp.state_space)
 
-states = state_hist(hist)   # vector of states at each step
+    bvec = zeros(Float64, n)
+    bvec[idx] = 1.0
+
+    # 2. Alpha vectors and their associated actions
+    alphas = policy.alphas
+    amap   = policy.action_map  # a vector of actions
+
+    best_i   = 1
+    best_val = -Inf
+
+    for i in eachindex(alphas)
+        v = dot(alphas[i], bvec)
+        if v > best_val
+            best_val = v
+            best_i = i
+        end
+    end
+
+    return amap[best_i]
+end
+
+
+
+function rollout_qmdp_continuous(pomdp::PlaneLandingPOMDP,
+                                 policy;
+                                 max_steps::Int = 5000)
+
+    # Start from the continuous initial state
+    s = pomdp.run_config.init_state
+
+    traj = State[]
+
+    for t in 1:max_steps
+        push!(traj, s)
+
+        # 1. Map continuous state to nearest grid state
+        idx    = stateindex(pomdp, s)
+        s_grid = pomdp.state_space[idx]
+
+        # 2. Use QMDP alpha vectors to choose an action for this grid state
+        a = qmdp_action_for_grid_state(pomdp, policy, s_grid)
+
+        # 3. Evolve the *real* continuous dynamics
+        s_next, r, done = step(s, a, pomdp.sim_config, pomdp.run_config)
+
+        s = s_next
+        if done
+            push!(traj, s)  # log terminal state too if desired
+            break
+        end
+    end
+
+    return traj
+end
+
+states = rollout_qmdp_continuous(pomdp, policy; max_steps = 5000)
 
 df = DataFrame(
     t     = 0:length(states)-1,
@@ -180,5 +238,5 @@ df = DataFrame(
     theta = [s.theta for s in states],
 )
 
-CSV.write("QMDP_certain_trajectory.csv", df)
-println("Wrote trajectory to QMDP_certain_trajectory.csv")
+CSV.write("QMDP_certain_trajectory6.csv", df)
+println("Wrote continuous QMDP trajectory to QMDP_certain_trajectory6.csv")
