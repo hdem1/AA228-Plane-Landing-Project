@@ -7,8 +7,8 @@ end
 
 function generate_run_config(sim_config::SimConfig)
     # generate avg airspeed 
-    avg_wind_vx = rand(Normal(0, sim_config.scene_params.avg_wind_speed_x_sigma))
-    avg_wind_vy = rand(Normal(0, sim_config.scene_params.avg_wind_speed_y_sigma))
+    avg_wind_vx = rand(Normal(0, 3*sim_config.scene_params.avg_wind_speed_x_sigma))
+    avg_wind_vy = rand(Normal(0, 3*sim_config.scene_params.avg_wind_speed_y_sigma))
 
     # Generate individual windspeeds
     num_wind_layers =  sim_config.scene_params.num_wind_layers

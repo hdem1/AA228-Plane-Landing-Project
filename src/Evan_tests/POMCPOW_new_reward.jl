@@ -8,6 +8,8 @@ using POMCPOW
 using Random
 using CSV, DataFrames
 using Distributions
+using POMDPTools: Deterministic
+
 
 
 # Load your existing project code (states, actions, dynamics, configs, etc.)
@@ -100,7 +102,6 @@ function Base.rand(rng::AbstractRNG, d::ObsDist)
 end
 
 
-using POMDPTools: Deterministic
 
 function POMDPs.observation(p::PlaneLandingPOMDP,
                             s::State,
@@ -123,49 +124,31 @@ end
 
 # Transition and reward (explicit interface)
 
-# Transition: step your simulator once, wrap next_state in Deterministic
-function POMDPs.transition(p::PlaneLandingPOMDP,
-                           s::State,
-                           a::Action)
-    # Your step(s, a, sim_config, run_config) -> (sp, r, done)
-    sp, r, done = step(s, a, p.sim_config, p.run_config)
-
-    # ---- OPTIONAL: add extra wind uncertainty here ----
-    # If your step() already includes random wind, you can skip this.
-    # If you want extra gusts, uncomment and set sigmas:
-    #
-    # wind_σx = 0.0
-    # wind_σy = 0.0
-    # sp = State(
-    #     sp.x,
-    #     sp.y,
-    #     sp.theta,
-    #     sp.vx,
-    #     sp.vy,
-    #     sp.throttle,
-    #     sp.wind_vx + wind_σx*randn(),
-    #     sp.wind_vy + wind_σy*randn(),
-    # )
+function POMDPs.transition(p::PlaneLandingPOMDP, s::State, a::Action)
+    sp, _, _ = step(s, a, p.sim_config, p.run_config; log=false)
 
     return Deterministic(sp)
 end
 
-# Reward: reuse your existing reward logic
-function POMDPs.reward(p::PlaneLandingPOMDP,
-                       s::State,
-                       a::Action,
-                       sp::State)
-    # Use your existing reward logic
-    reward, terminate = get_reward_and_terminate(s, a, p.sim_config)
-
-    if !isfinite(reward)
-        @warn "Non-finite reward in POMDPs.reward" reward state=s action=a
-        # Band-aid: treat this as a big crash and terminate
-        reward = -1e6
+function POMDPs.reward(p::PlaneLandingPOMDP, s::State, a::Action, sp::State)
+    # We already computed reward in the generative model for env runs,
+    # but POMCPOW calls this separately, so just reuse the same logic:
+    r, _ = get_reward_and_terminate(sp, a, p.sim_config; log=false)
+    if !isfinite(r)
+        @warn "Non-finite reward in POMDPs.reward" r state=s action=a
+        r = -1e6
     end
-
-    return reward
+    return r
 end
+
+function environment_step(p::PlaneLandingPOMDP, s::State, a::Action)
+    sp, _, _ = step(s, a, p.sim_config, p.run_config)
+
+    r, done = get_reward_and_terminate(sp, a, p.sim_config; log=true)
+    return sp, r, done
+end
+
+
 
 function POMDPs.isterminal(p::PlaneLandingPOMDP, s::State)
     # Same conditions as get_reward_and_terminate
@@ -178,62 +161,61 @@ function POMDPs.isterminal(p::PlaneLandingPOMDP, s::State)
     return false
 end
 
-
-# Main driver: build POMDP, solve with POMCPOW, export CSV
-
 function main()
-    # 1. Load configs using your existing code
+    # 1. Load configs
     sim_config = load_sim_config()
-    run_config = generate_run_config(sim_config)
 
-    pomdp = PlaneLandingPOMDP(sim_config, run_config)
+    # If you want the *same* wind / init for all episodes:
+    
 
-    # 2. Set up POMCPOW solver
-solver = POMCPOWSolver(
-    tree_queries = 600,
-    max_depth    = 30,
-    eps          = 0.001,      # default UCT exploration; tune if you like
-    # you can also set other options here if needed, e.g.:
-    # enable_action_pw = true,
-    # alpha_action     = 0.5,
-    # k_action         = 1.0,
-)
-
-
-    policy = solve(solver, pomdp)
-
-    # 3. Simulate one episode, using the POMCPOW policy
-    sim = HistoryRecorder(max_steps = 1500)
-    hist = simulate(sim, pomdp, policy)
-
-    # 4. Extract states from history
-states  = hist[:s]                      # this is already a vector of State
-rewards = [step.r for step in hist]     # turn generator into Vector{Float64}
-
-
-    # 5. Export trajectory to CSV
-    df = DataFrame(
-        t       = 0:length(states)-1,
-        x       = [s.x      for s in states],
-        y       = [s.y      for s in states],
-        vx      = [s.vx     for s in states],
-        vy      = [s.vy     for s in states],
-        theta   = [s.theta  for s in states],
-        thr     = [s.throttle for s in states],
-        wind_vx = [s.wind_vx for s in states],
-        wind_vy = [s.wind_vy for s in states],
-        r       = rewards,
+    # 2. Set up POMCPOW solver and planner
+    solver = POMCPOWSolver(
+        tree_queries = 1500,
+        max_depth    = 60,
+        eps          = 0.001,
     )
-@show size(df)
-@show names(df)
-@show eltype.(eachcol(df))
-println(first(df, 1))
 
-CSV.write("POMCPOW_trajectory8.csv", df; bufsize=10_000_000)  # 10 MB buffer
 
-    println("POMCPOW episode finished.")
-    println("Total reward = ", sum(rewards))
-    println("Trajectory written to POMCPOW_trajectory8.csv")
+    # 3. Run multiple episodes and collect all trajectories
+    n_episodes = 10
+    all_df = DataFrame()
+
+    for ep in 1:n_episodes
+        run_config = generate_run_config(sim_config)
+
+        pomdp = PlaneLandingPOMDP(sim_config, run_config)
+        policy = solve(solver, pomdp)
+        sim = HistoryRecorder(max_steps = 1500)
+
+        # This uses your POMDP definitions: initialstate, transition, reward, etc.
+        hist = simulate(sim, pomdp, policy)
+
+        states  = hist[:s]
+        rewards = [step.r for step in hist]
+
+        df_ep = DataFrame(
+            episode = fill(ep, length(states)),
+            t       = 0:length(states)-1,
+            x       = [s.x for s in states],
+            y       = [s.y for s in states],
+            vx      = [s.vx for s in states],
+            vy      = [s.vy for s in states],
+            theta   = [s.theta for s in states],
+            thr     = [s.throttle for s in states],
+            wind_vx = [s.wind_vx for s in states],
+            wind_vy = [s.wind_vy for s in states],
+            r       = rewards,
+        )
+
+        append!(all_df, df_ep)
+    end
+
+    @show size(all_df)
+    CSV.write("POMCPOW_many_trajectories3.csv", all_df)
+
+    println("Finished $n_episodes episodes.")
+    println("Total rewards per episode = ",
+        combine(groupby(all_df, :episode), :r => sum => :total_R))
 end
 
 main()
