@@ -1,25 +1,18 @@
-#########################################################
-# POMCPOW_test.jl – run POMCPOW on your plane POMDP
-#########################################################
-
+# POMCPOW_test.jl – FINAL
 using POMDPs
-using POMDPTools              # HistoryRecorder, etc.
+using POMDPTools # HistoryRecorder, etc.
 using POMCPOW
 using Random
 using CSV, DataFrames
 using Distributions
 using POMDPTools: Deterministic
 
-
-
-# Load your existing project code (states, actions, dynamics, configs, etc.)
+# Load existing project code (states, actions, dynamics, configs, etc.)
 include(joinpath(@__DIR__, "..", "includes.jl"))
 
-#########################################################
 # POMDP wrapper around your existing simulator
-#########################################################
 
-# We'll use Observation = State (with noise added).
+# use Observation = State (with noise added).
 const Obs = Observation
 
 struct PlaneLandingPOMDP <: POMDP{State, Action, Obs}
@@ -27,12 +20,10 @@ struct PlaneLandingPOMDP <: POMDP{State, Action, Obs}
     run_config::RunConfig
 end
 
-# ----- Discount factor -----
+# Discount factor 
 POMDPs.discount(::PlaneLandingPOMDP) = 0.99
 
-using POMDPTools: Deterministic   # you already have this above, so make sure it's there once
-
-# ----- Initial state -----
+# Initial state
 function POMDPs.initialstate(p::PlaneLandingPOMDP)
     # Return a *distribution* instead of a raw State.
     # HistoryRecorder will then sample with rand(rng, ...)
@@ -41,11 +32,8 @@ end
 
 function POMDPs.initialstate(p::PlaneLandingPOMDP, rng::AbstractRNG)
     # If anything calls the RNG version, just give the actual state back.
-    # (This version is mostly here for compatibility.)
     return p.run_config.init_state
 end
-
-
 
 # Action space
 
@@ -89,7 +77,7 @@ function Distributions.pdf(d::ObsDist, o::Observation)
     return px * py * pθ * pvx * pvy
 end
 
-# How to sample a noisy observation from this distribution
+# Sample a noisy observation from this distribution
 function Base.rand(rng::AbstractRNG, d::ObsDist)
     oc = d.oc
     return Observation(
@@ -100,8 +88,6 @@ function Base.rand(rng::AbstractRNG, d::ObsDist)
         d.mu.vy_air + randn(rng) * oc.vy_air_err_mag,
     )
 end
-
-
 
 function POMDPs.observation(p::PlaneLandingPOMDP,
                             s::State,
@@ -120,10 +106,7 @@ function POMDPs.observation(p::PlaneLandingPOMDP,
     return ObsDist(mu, oc)
 end
 
-
-
 # Transition and reward (explicit interface)
-
 function POMDPs.transition(p::PlaneLandingPOMDP, s::State, a::Action)
     sp, _, _ = step(s, a, p.sim_config, p.run_config; log=false)
 
@@ -131,8 +114,6 @@ function POMDPs.transition(p::PlaneLandingPOMDP, s::State, a::Action)
 end
 
 function POMDPs.reward(p::PlaneLandingPOMDP, s::State, a::Action, sp::State)
-    # We already computed reward in the generative model for env runs,
-    # but POMCPOW calls this separately, so just reuse the same logic:
     r, _ = get_reward_and_terminate(sp, a, p.sim_config; log=false)
     if !isfinite(r)
         @warn "Non-finite reward in POMDPs.reward" r state=s action=a
@@ -165,16 +146,12 @@ function main()
     # 1. Load configs
     sim_config = load_sim_config()
 
-    # If you want the *same* wind / init for all episodes:
-    
-
     # 2. Set up POMCPOW solver and planner
     solver = POMCPOWSolver(
-        tree_queries = 1500,
-        max_depth    = 60,
+        tree_queries = 1800,
+        max_depth    = 75,
         eps          = 0.001,
     )
-
 
     # 3. Run multiple episodes and collect all trajectories
     n_episodes = 10
@@ -211,7 +188,7 @@ function main()
     end
 
     @show size(all_df)
-    CSV.write("POMCPOW_many_trajectories3.csv", all_df)
+    CSV.write("POMCPOW_many_trajectories4.csv", all_df)
 
     println("Finished $n_episodes episodes.")
     println("Total rewards per episode = ",

@@ -14,9 +14,9 @@ struct PlaneLandingPOMDP <: POMDP{State, Action, Observation}
     state_space::Vector{State}
 
 end 
-const NX  = 15   # number of x points
-const NY  = 10   # number of y (altitude) points
-const NVX = 7    # tweak all of these as needed
+const NX  = 15 # number of x points
+const NY  = 10 # number of y (altitude) points
+const NVX = 7 # tweak all of these as needed
 const NVY = 7
 const NTH = 5
 const x_min = -2000.0
@@ -65,7 +65,7 @@ end
 
 POMDPs.actions(p::PlaneLandingPOMDP, s::State) = POMDPs.actions(p)
 
-# 3. Hook up the POMDPs.jl interface by calling existing code
+# 3. Hook up the POMDPs.jl interface 
 POMDPs.initialstate(p::PlaneLandingPOMDP) = p.run_config.init_state
 
 POMDPs.transition(p::PlaneLandingPOMDP, s::State, a::Action) = begin
