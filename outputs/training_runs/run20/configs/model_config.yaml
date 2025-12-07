@@ -1,0 +1,14 @@
+obs_discretization:
+  x: [1000]
+  y: [50, 100, 150, 200]
+  theta: [-0.08,]
+  vx_air: [50]
+  vy_air: [-13, -10, -8, -4]
+action_discretization:
+  throttle: [0.33, 0.66]
+  pitch: [-0.05, 0, 0.05]
+max_num_iterations: 1000000
+discount_factor: 0.9
+learning_rate: 0.9
+exploration_rate: 0.1
+test_iterations:  10000

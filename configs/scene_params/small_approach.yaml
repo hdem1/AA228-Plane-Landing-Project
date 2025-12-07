@@ -1,0 +1,13 @@
+name: Short Approach
+width: 4000
+height: 500
+starting_x_bounds: [10, 50]
+starting_y_bounds: [300, 400] # edited these to land
+starting_theta_bounds: [-0.1, 0.1]
+starting_alpha_bounds: [0.0, 0.05]
+starting_vel_bounds: [40, 50]
+avg_wind_speed_x_sigma: 0
+avg_wind_speed_y_sigma: 0
+wind_speed_x_var_sigma: 0
+wind_speed_y_var_sigma: 0
+num_wind_layers: 10

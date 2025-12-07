@@ -40,6 +40,12 @@ function get_reward_and_terminate(state::State, action::Action, sim_config::SimC
         return reward, true
     end
 
+    # Terminate if starts flying backwards
+    # if state.vx < 0
+    #     reward -= 10000
+    #     return reward, true
+    # end
+
     # Small punishment for going around (x > width)
     if state.y > 0 && state.x >= sim_config.scene_params.width
         reward -= 1000

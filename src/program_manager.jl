@@ -63,9 +63,12 @@ function run_q_learning()
         while !terminate
             # Get new action:
             if (rand() < model_config.epsilon) #Explore!
-                discretized_action = indexToAction(rand(1:model_config.action_discretization_config.tot_action_space), model_config.action_discretization_config)
+                randIndex = rand(1:model_config.action_discretization_config.tot_action_space)
+                discretized_action = indexToAction(randIndex, model_config.action_discretization_config)
+                #println("Random Action: $randIndex -> $(discretized_action.throttleAction), $(discretized_action.pitchAction)")
             else #Take best action!
                 discretized_action = get_best_action(q_learning_model, curr_obs)
+                #println("Best Action: $(discretized_action.throttleAction), $(discretized_action.pitchAction)")
             end
             action = Action(discretized_action, model_config.action_discretization_config, sim_config.action_bounds_config)
 
@@ -104,6 +107,9 @@ function run_q_learning()
     println("Testing:")
     p2 = Progress(model_config.test_iter)
     avg_reward = 0.0
+    num_landed = 0
+    num_went_around = 0
+    num_crashed = 0
     while iter < model_config.test_iter
 
         # Loop through a single simulation:
@@ -113,6 +119,7 @@ function run_q_learning()
         curr_obs = DiscretizedObservation(curr_state, sim_config.obs_uncertainty_config, model_config.obs_discretization_config)
         t = 0.0
         tot_reward = 0.0
+        final_reward = 0
         if should_save_testing_traj(save_config, iter, false)
             states = Vector{String}()
             push!(states,"t,reward,"*get_state_print_format())
@@ -135,8 +142,16 @@ function run_q_learning()
             curr_obs = new_obs
             curr_state = new_state
             tot_reward += reward
+            final_reward = reward
         end
 
+        if final_reward > 5000
+            num_landed += 1
+        elseif final_reward == -10000
+            num_crashed += 1
+        elseif final_reward == -1000
+            num_went_around +=1
+        end
         avg_reward += (tot_reward / model_config.test_iter)
         if should_save_testing_traj(save_config, iter, true)
             log_trajectory("testing$iter", states)
@@ -145,12 +160,16 @@ function run_q_learning()
         iter+=1
     end
     println("Finished Testing with Average Reward $avg_reward")
+    println("Out of $(model_config.test_iter) tests, there were: ")
+    println(" - $num_landed landings")
+    println(" - $num_crashed crashes")
+    println(" - $num_went_around times going around")
 
     # Save final model:
     if save_config.saving
         print("Saving final model.......")
         model_dataframe = model2DataFrame(q_learning_model)
-        log_model(model_dataframe, avg_reward)
+        log_model(model_dataframe, avg_reward,model_config.test_iter, num_landed, num_crashed, num_went_around)
         println("Success")
     end
 end

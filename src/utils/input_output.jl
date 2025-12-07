@@ -98,7 +98,7 @@ function delete_run(run_num::Int64)
     end
 end
 
-function log_model(model_dataframe::DataFrame, average_reward::Float64)
+function log_model(model_dataframe::DataFrame, average_reward::Float64, num_tests::Int64, num_landed::Int64, num_crashed::Int64, num_went_around::Int64)
     if RUN_NUMBER == -1
         error("You cannot save the final model without saving the rest of the training data")
     end
@@ -109,7 +109,7 @@ function log_model(model_dataframe::DataFrame, average_reward::Float64)
 
     # Add model to log:
     open(MODEL_LOG_FILENAME, "a") do f
-        println(f, "$RUN_NUMBER,$average_reward")
+        println(f, "$RUN_NUMBER,$average_reward,$num_tests,$num_landed,$num_crashed,$num_went_around")
     end
 end
 

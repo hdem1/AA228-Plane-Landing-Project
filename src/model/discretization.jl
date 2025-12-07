@@ -184,6 +184,7 @@ function Action(disc_action::DiscretizedAction, config::ActionDiscretizationConf
         high_pitch = config.pitch_bins[disc_action.pitchAction]
     end
     dPitch = (low_pitch + high_pitch) / 2
+    #println("$(disc_action.throttleAction), $(disc_action.pitchAction) --> $throttle, $dPitch")
 
     return Action(throttle, dPitch)
 end

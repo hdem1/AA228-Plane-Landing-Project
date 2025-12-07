@@ -27,7 +27,19 @@ end
 
 function get_best_action(model::QLearningModel, obs::DiscretizedObservation)
     obsIndex = obsToIndex(obs, model.obs_discretization_config)
-    _, best_action = findmax(obsIndex)
+    #val, best_action = findmax(obsIndex)
+    val = -10000000000
+    best_action_list = Vector{Int64}()
+    for i in 1:model.action_discretization_config.tot_action_space
+        if model.q_table[obsIndex, i] > val
+            best_action_list =  Vector{Int64}()
+            push!(best_action_list, i)
+            val = model.q_table[obsIndex, i] 
+        elseif model.q_table[obsIndex, i] == val
+            push!(best_action_list, i)
+        end
+    end
+    best_action = rand(best_action_list)
     return indexToAction(best_action, model.action_discretization_config)
 end
 
